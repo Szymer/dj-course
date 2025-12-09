@@ -47,10 +47,11 @@ def main_loop():
 
             # Handle response - some clients return string, others return object with .text
             response_text = response.text if hasattr(response, 'text') else response
-
+            
             # Display response
             console.print_assistant(f"\n{session.assistant_name}: {response_text}")
             console.print_info(f"Tokens: {total_tokens} (Pozostało: {remaining_tokens} / {max_tokens})")
+            
 
             # Save session
             success, error = session.save_to_file()
