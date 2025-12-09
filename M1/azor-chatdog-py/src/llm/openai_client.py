@@ -100,11 +100,26 @@ class OpenAIClient:
         return cls(client=client, model_name=model_name)
 
     def create_chat_session(self, system_instruction: str, history: Optional[List[Dict[str, Any]]], thinking_budget: int = 0) -> OpenAIChatSession:
+        # Convert universal format (parts) to OpenAI format (content)
+        converted_history = []
+        for entry in (history or []):
+            if 'parts' in entry and entry['parts']:
+                # Gemini/universal format: {"role": "user|model", "parts": [{"text": "..."}]}
+                role = entry.get('role', 'user')
+                # Normalize role: "model" -> "assistant"
+                if role == 'model':
+                    role = 'assistant'
+                text = entry['parts'][0].get('text', '')
+                converted_history.append({"role": role, "content": text})
+            elif 'content' in entry:
+                # Already in OpenAI format
+                converted_history.append(entry)
+        
         return OpenAIChatSession(
             client=self._client,
             model_name=self._model,
             system_instruction=system_instruction,
-            history=history or [],
+            history=converted_history,
         )
 
     def count_history_tokens(self, history: List[Dict[str, Any]]) -> int:

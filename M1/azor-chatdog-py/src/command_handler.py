@@ -4,8 +4,9 @@ from commands.session_list import list_sessions_command
 from commands.session_display import display_full_session
 from commands.session_to_pdf import export_session_to_pdf
 from commands.session_remove import remove_session_command
+from commands.audio import play_session_responses
 
-VALID_SLASH_COMMANDS = ['/exit', '/quit', '/switch', '/help', '/session', '/pdf']
+VALID_SLASH_COMMANDS = ['/exit', '/quit', '/switch', '/help', '/session', '/pdf', '/audio']
 
 def handle_command(user_input: str) -> bool:
     """
@@ -72,6 +73,9 @@ def handle_command(user_input: str) -> bool:
     elif command == '/pdf':
         current = manager.get_current_session()
         export_session_to_pdf(current.get_history(), current.session_id, current.assistant_name)
+    elif command == '/audio':
+        current = manager.get_current_session()
+        play_session_responses(history=current.get_history(), speaker_wav_path="C:/djc/dj-course/M2/text-to-speech-xtts/szymon-proba.wav", language="pl")
 
     return False
 

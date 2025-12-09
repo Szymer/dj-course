@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from TTS.api import TTS
 
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2",progress_bar=True).to("cpu")

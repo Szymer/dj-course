@@ -58,15 +58,29 @@ def save_session_history(session_id: str, history: List[Dict], system_prompt: st
     json_history = []
     for content in history:
         # Handle universal format (dictionaries) from both Gemini and LLaMA clients
-        if isinstance(content, dict) and 'parts' in content and content['parts']:
-            text_part = content['parts'][0].get('text', '')
-        else:
-            # Fallback for legacy formats
-            text_part = getattr(content, 'parts', [{}])[0].get('text', '') if hasattr(content, 'parts') else ""
+        text_part = ""
+        role = ""
         
-        if text_part:
+        if isinstance(content, dict):
+            # Gemini/LLaMA format: {"role": "user|model", "parts": [{"text": "..."}]}
+            if 'parts' in content and content['parts']:
+                text_part = content['parts'][0].get('text', '')
+            # OpenAI format: {"role": "user|assistant", "content": "..."}
+            elif 'content' in content:
+                text_part = content.get('content', '')
+            
+            # Normalize role: "assistant" -> "model"
+            role = content.get('role', '')
+            if role == 'assistant':
+                role = 'model'
+        else:
+            # Fallback for legacy object formats
+            text_part = getattr(content, 'parts', [{}])[0].get('text', '') if hasattr(content, 'parts') else ""
+            role = getattr(content, 'role', '')
+        
+        if text_part and role:
             json_history.append({
-                'role': content.get('role', '') if isinstance(content, dict) else getattr(content, 'role', ''),
+                'role': role,
                 'timestamp': datetime.now().isoformat(),
                 'text': text_part
             })
