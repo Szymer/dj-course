@@ -12,6 +12,7 @@ import (
 )
 
 // GenerateTransportationOrders generates transportation orders with realistic data.
+// Losowo przypisuje kierowcę i pojazd do każdego zamówienia.
 func GenerateTransportationOrders(count int, customers []customers.Customer) []TransportationOrder {
 	orders := make([]TransportationOrder, count)
 	shippingMethods := []string{"Standard Delivery", "Express Delivery", "Next Day Delivery", "Same Day Delivery", "Economy Shipping"}
@@ -19,6 +20,10 @@ func GenerateTransportationOrders(count int, customers []customers.Customer) []T
 	now := time.Now()
 	oneYearAgo := now.AddDate(-1, 0, 0)
 	twoWeeksAgo := now.AddDate(0, 0, -14)
+
+	// Przygotuj listy kierowców i pojazdów do losowania
+	driverCount := 20 // domyślna liczba kierowców, można pobrać z configa lub argumentu
+	vehicleCount := 20 // domyślna liczba pojazdów
 
 	for i := 0; i < count; i++ {
 		// Generate random order date within the last year
@@ -52,6 +57,10 @@ func GenerateTransportationOrders(count int, customers []customers.Customer) []T
 		// Randomly select a customer
 		customerIndex := rand.Intn(len(customers))
 
+		// Losowo przypisz kierowcę i pojazd (ID od 1 do N)
+		driverID := rand.Intn(driverCount) + 1
+		vehicleID := rand.Intn(vehicleCount) + 1
+
 		orders[i] = TransportationOrder{
 			ID:               i + 1,
 			OrderNumber:      fmt.Sprintf("#%05d", i+1),
@@ -66,6 +75,8 @@ func GenerateTransportationOrders(count int, customers []customers.Customer) []T
 			ShippingZipCode:  address.Zip,
 			ShippingMethod:   shippingMethods[rand.Intn(len(shippingMethods))],
 			TrackingNumber:   fmt.Sprintf("SR%04d", i+1),
+			VehicleID:        vehicleID,
+			DriverID:         driverID,
 		}
 	}
 

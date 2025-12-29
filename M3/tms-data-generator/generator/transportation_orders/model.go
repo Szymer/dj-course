@@ -17,6 +17,8 @@ const (
 )
 
 // TransportationOrder represents a transportation order entity.
+// VehicleID: ID pojazdu przypisanego do zamówienia.
+// DriverID: ID kierowcy przypisanego do zamówienia.
 type TransportationOrder struct {
 	ID               int
 	OrderNumber      string
@@ -31,6 +33,8 @@ type TransportationOrder struct {
 	ShippingZipCode  string
 	ShippingMethod   string
 	TrackingNumber   string
+	VehicleID        int // ID pojazdu przypisanego do zamówienia
+	DriverID         int // ID kierowcy przypisanego do zamówienia
 }
 
 // EventType represents the type of timeline event.

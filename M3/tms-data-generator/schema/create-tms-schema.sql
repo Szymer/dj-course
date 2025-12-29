@@ -37,6 +37,8 @@ CREATE TABLE transportation_orders (
     id INT PRIMARY KEY,
     order_number VARCHAR(20) UNIQUE NOT NULL,
     customer_id INT NOT NULL,
+    driver_id INT,
+    vehicle_id INT,
     status VARCHAR(20) NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     order_date TIMESTAMP NOT NULL,
@@ -47,7 +49,27 @@ CREATE TABLE transportation_orders (
     shipping_zip_code VARCHAR(20),
     shipping_method VARCHAR(50),
     tracking_number VARCHAR(50),
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (driver_id) REFERENCES drivers(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+
+-- Table for daily driver availability
+CREATE TABLE available_drivers (
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    driver_id INT NOT NULL,
+    available_date DATE NOT NULL,
+    is_day_off BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (driver_id) REFERENCES drivers(id)
+);
+
+-- Table for daily vehicle availability
+CREATE TABLE available_vehicles (
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    vehicle_id INT NOT NULL,
+    available_date DATE NOT NULL,
+    is_service_day BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
 );
 
 CREATE TABLE order_timeline_events (
