@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime
 from typing import List, Any, Dict
-from files.config import LOG_DIR
+from files import config
 
 def load_session_history(session_id: str) -> tuple[List[Dict], str | None]:
     """
@@ -13,7 +13,7 @@ def load_session_history(session_id: str) -> tuple[List[Dict], str | None]:
         History format: [{"role": "user|model", "parts": [{"text": "..."}]}, ...]
     """
     
-    log_filename = os.path.join(LOG_DIR, f"{session_id}-log.json")
+    log_filename = os.path.join(config.LOG_DIR, f"{session_id}-log.json")
     if not os.path.exists(log_filename):
         return [], f"Session log file '{log_filename}' does not exist. Starting new session."
 
@@ -53,7 +53,7 @@ def save_session_history(session_id: str, history: List[Dict], system_prompt: st
         # CONDITION: Prevents saving empty/incomplete session
         return True, None
 
-    log_filename = os.path.join(LOG_DIR, f"{session_id}-log.json")
+    log_filename = os.path.join(config.LOG_DIR, f"{session_id}-log.json")
 
     json_history = []
     for content in history:
@@ -88,12 +88,12 @@ def save_session_history(session_id: str, history: List[Dict], system_prompt: st
 
 def list_sessions():
     """Returns a list of available sessions with their metadata."""
-    files = os.listdir(LOG_DIR)
+    files = os.listdir(config.LOG_DIR)
     session_ids = sorted([f.replace('-log.json', '') for f in files if f.endswith('-log.json') and f != 'azor-wal.json'])
     
     sessions_data = []
     for sid in session_ids:
-        log_path = os.path.join(LOG_DIR, f"{sid}-log.json")
+        log_path = os.path.join(config.LOG_DIR, f"{sid}-log.json")
         try:
             with open(log_path, 'r', encoding='utf-8') as f:
                 log_data = json.load(f)
