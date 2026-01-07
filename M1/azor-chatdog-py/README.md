@@ -76,6 +76,12 @@ python src/run.py
 /session new
 ```
 
+Interactive `/switch` picker
+---------------------------
+
+You can now run `/switch` without arguments to open a keyboard-driven session picker in the terminal. It lists available sessions (ID, message count, last activity). Use the arrow keys or type a number/id to select. If `prompt_toolkit` is not installed, a numbered input fallback will be used.
+
+
 ## Pliki Sesji
 
 Sesje są zapisywane w `~/.azor/`:

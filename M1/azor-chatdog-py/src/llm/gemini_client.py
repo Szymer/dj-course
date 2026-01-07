@@ -8,6 +8,7 @@ import sys
 from typing import Optional, List, Any, Dict
 from google import genai
 from google.genai import types
+from google.genai.types import Tool, ToolConfig
 from dotenv import load_dotenv
 from cli import console
 from .gemini_validation import GeminiConfig
@@ -145,7 +146,9 @@ class GeminiLLMClient:
     def create_chat_session(self, 
                           system_instruction: str, 
                           history: Optional[List[Dict]] = None,
-                          thinking_budget: int = 0) -> GeminiChatSessionWrapper:
+                          thinking_budget: int = 0,
+                          tools: Optional[List[Tool]] = None,
+                          tool_config: Optional[ToolConfig] = None) -> GeminiChatSessionWrapper:
         """
         Creates a new chat session with the specified configuration.
         
@@ -153,6 +156,8 @@ class GeminiLLMClient:
             system_instruction: System role/prompt for the assistant
             history: Previous conversation history (optional, in universal dict format)
             thinking_budget: Thinking budget for the model
+            tools: Optional list of Tool objects for function calling
+            tool_config: Optional ToolConfig to control tool calling behavior
             
         Returns:
             GeminiChatSessionWrapper with universal dictionary-based interface
@@ -186,7 +191,9 @@ class GeminiLLMClient:
                 temperature=temperature,
                 top_p=top_p,
                 top_k=top_k,
-                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget)
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+                tools=tools,
+                tool_config=tool_config
             )
         )
         

@@ -4,6 +4,8 @@ from commands.session_list import list_sessions_command
 from commands.session_display import display_full_session
 from commands.session_to_pdf import export_session_to_pdf
 from commands.session_remove import remove_session_command
+from files.session_files import list_sessions as list_sessions_files
+from ui.session_picker import pick_session
 
 VALID_SLASH_COMMANDS = ['/exit', '/quit', '/switch', '/help', '/session', '/pdf']
 
@@ -60,7 +62,43 @@ def handle_command(user_input: str) -> bool:
                         from commands.session_summary import display_history_summary
                         display_history_summary(new_session.get_history(), new_session.assistant_name)
         else:
-            console.print_error("Błąd: Użycie: /switch <SESSION-ID>")
+            # No session id provided - present interactive picker
+            sessions = list_sessions_files()
+            if not sessions:
+                console.print_error("Brak dostępnych sesji do przełączenia.")
+            else:
+                # Sort sessions by last_activity (best-effort: newest first)
+                try:
+                    def _sort_key(s):
+                        # prefer ISO datetime for sorting if available
+                        iso = s.get('last_activity_iso')
+                        if iso:
+                            return iso
+                        return s.get('last_activity') or ''
+                    sessions_sorted = sorted(sessions, key=_sort_key, reverse=True)
+                except Exception:
+                    sessions_sorted = sessions
+
+                selected = pick_session(sessions_sorted)
+                if not selected:
+                    console.print_info("Anulowano wybór sesji.")
+                else:
+                    # Delegate to normal switch logic by calling switch_to_session
+                    current = manager.get_current_session()
+                    if selected == current.session_id:
+                        console.print_info("Jesteś już w tej sesji.")
+                    else:
+                        new_session, save_attempted, previous_session_id, load_successful, load_error, has_history = manager.switch_to_session(selected)
+                        if save_attempted:
+                            console.print_info(f"\nZapisuję bieżącą sesję: {previous_session_id}...")
+                        if not load_successful:
+                            console.print_error(f"Nie można wczytać sesji o ID: {selected}. {load_error}")
+                        else:
+                            console.print_info(f"\n--- Przełączono na sesję: {new_session.session_id} ---")
+                            console.display_help(new_session.session_id)
+                            if has_history:
+                                from commands.session_summary import display_history_summary
+                                display_history_summary(new_session.get_history(), new_session.assistant_name)
             
     # Session subcommands
     elif command == '/session':

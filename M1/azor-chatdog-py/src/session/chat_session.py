@@ -1,6 +1,7 @@
 import uuid
 from typing import List, Any, Union
 import os
+import json
 from files import session_files
 from files.wal import append_to_wal
 from llm.gemini_client import GeminiLLMClient
@@ -9,6 +10,9 @@ from llm.anthropic_client import AnthropicClient
 from llm.openai_client import OpenAIClient
 from assistant import Assistant
 from cli import console
+from cli.prompt import get_user_input
+from tools.clarification_tool import create_clarification_tool
+from google.genai.types import Content, Part
 
 # Context token limit
 
@@ -62,11 +66,24 @@ class ChatSession:
             client_cls = ENGINE_MAPPING[engine]
             self._llm_client = client_cls.from_environment()
         
-        self._llm_chat_session = self._llm_client.create_chat_session(
-            system_instruction=self.assistant.system_prompt,
-            history=self._history,
-            thinking_budget=0
-        )
+        # Check if this engine supports tools (currently only Gemini)
+        tools = None
+        if isinstance(self._llm_client, GeminiLLMClient):
+            # Enable clarification tool for Gemini
+            tools = [create_clarification_tool()]
+            self._llm_chat_session = self._llm_client.create_chat_session(
+                system_instruction=self.assistant.system_prompt,
+                history=self._history,
+                thinking_budget=0,
+                tools=tools
+            )
+        else:
+            # Other clients don't support tools parameter
+            self._llm_chat_session = self._llm_client.create_chat_session(
+                system_instruction=self.assistant.system_prompt,
+                history=self._history,
+                thinking_budget=0
+            )
     
     
     @classmethod
@@ -112,6 +129,7 @@ class ChatSession:
         """
         Sends a message to the LLM and returns the response.
         Updates internal history automatically and logs to WAL.
+        Handles tool calls (function calling) for clarification requests.
         
         Args:
             text: User's message
@@ -123,6 +141,11 @@ class ChatSession:
             raise RuntimeError("LLM session not initialized")
         
         response = self._llm_chat_session.send_message(text)
+        
+        # Check if the model requested a tool call (function calling)
+        # This is specific to Gemini client with tool support
+        if isinstance(self._llm_client, GeminiLLMClient) and hasattr(response, 'function_calls') and response.function_calls:
+            response = self._handle_tool_calls(response)
         
         # Sync history after message
         self._history = self._llm_chat_session.get_history()
@@ -146,6 +169,97 @@ class ChatSession:
             pass
         
         return response
+    
+    def _handle_tool_calls(self, response):
+        """
+        Handles tool calls (function calling) from the LLM response.
+        Currently supports the ask_user_for_clarification tool.
+        
+        Args:
+            response: Response object from Gemini with function_calls
+            
+        Returns:
+            Final response after tool execution
+        """
+        tool_calls = response.function_calls or []
+        
+        if not tool_calls:
+            return response
+        
+        # Process each tool call
+        tool_responses = []
+        
+        for fc in tool_calls:
+            if fc.name == 'ask_user_for_clarification':
+                # Extract arguments
+                clarification_question = fc.args.get('clarification_question', '')
+                reason = fc.args.get('reason', '')
+                
+                # Display the clarification request to the user
+                console.print_info(f"\n🤔 Model prosi o doprecyzowanie:")
+                if reason:
+                    console.print_info(f"   Powód: {reason}")
+                console.print_info(f"   Pytanie: {clarification_question}\n")
+                
+                # Get user's clarification
+                user_clarification = get_user_input()
+                
+                # Prepare tool response
+                tool_result = {
+                    'clarification': user_clarification
+                }
+                
+                console.print_info(f"✅ Odpowiedź przekazana do modelu\n")
+                
+                # Create function response part
+                tool_responses.append(Part.from_function_response(
+                    name=fc.name,
+                    response=tool_result
+                ))
+            else:
+                # Unknown tool - return error
+                tool_responses.append(Part.from_function_response(
+                    name=fc.name,
+                    response={'error': f'Unknown function: {fc.name}'}
+                ))
+        
+        # Send tool responses back to the model to get final answer
+        try:
+            # For Gemini chat sessions, after a function call, we need to provide the response
+            # and the model will automatically generate the final text response
+            # We'll use the low-level API through the client
+            
+            client = self._llm_client.client
+            model_name = self._llm_client.get_model_name()
+            
+            # Get current history from the wrapper's underlying session
+            current_history = self._llm_chat_session.gemini_session.get_history()
+            
+            # Construct the tool response message
+            tool_content = Content(role="tool", parts=tool_responses)
+            
+            # Build contents list: history + tool response
+            contents = list(current_history)
+            contents.append(tool_content)
+            
+            # Get the config from the underlying session
+            # Access the internal config if available, otherwise create a basic one
+            session_config = None
+            if hasattr(self._llm_chat_session.gemini_session, '_config'):
+                session_config = self._llm_chat_session.gemini_session._config
+            
+            # Generate final response
+            final_response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=session_config
+            )
+            
+            return final_response
+            
+        except Exception as e:
+            console.print_error(f"Błąd podczas przetwarzania odpowiedzi narzędzia: {e}")
+            return response
     
     def get_history(self) -> List[Any]:
         """Returns the current conversation history."""

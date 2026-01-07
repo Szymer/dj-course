@@ -97,21 +97,36 @@ def list_sessions():
         try:
             with open(log_path, 'r', encoding='utf-8') as f:
                 log_data = json.load(f)
-                history_len = len(log_data.get('history', []))
-                last_msg_time_str = log_data.get('history', [{}])[-1].get('timestamp', 'Brak daty')
-                
-                time_str = 'Brak aktywności'
-                if last_msg_time_str != 'Brak daty':
+                history = log_data.get('history', [])
+                history_len = len(history)
+                last_msg = history[-1] if history else {}
+                last_msg_time_str = last_msg.get('timestamp')
+                last_msg_text = last_msg.get('text', '') if isinstance(last_msg, dict) else ''
+
+                last_activity_iso = ''
+                last_activity_human = 'Brak aktywności'
+                if last_msg_time_str:
                     try:
                         dt = datetime.fromisoformat(last_msg_time_str)
-                        time_str = dt.strftime('%Y-%m-%d %H:%M')
-                    except ValueError:
-                        pass
-            
+                        last_activity_human = dt.strftime('%Y-%m-%d %H:%M')
+                        last_activity_iso = dt.isoformat()
+                    except Exception:
+                        last_activity_iso = ''
+
+                # attempt to get a title if available, otherwise use a snippet
+                title = log_data.get('title') or ''
+                snippet = ''
+                if not title and last_msg_text:
+                    snippet = (last_msg_text[:120] + '...') if len(last_msg_text) > 120 else last_msg_text
+                    title = ''
+
             sessions_data.append({
                 'id': sid,
                 'messages_count': history_len,
-                'last_activity': time_str,
+                'last_activity': last_activity_human,
+                'last_activity_iso': last_activity_iso,
+                'title': title,
+                'snippet': snippet,
                 'error': None
             })
         except Exception:
