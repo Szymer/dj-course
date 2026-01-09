@@ -61,6 +61,7 @@ def display_help(session_id: str):
     print_help("  /switch <ID>      - Przełącza na istniejącą sesję.")
     print_help("  /help             - Wyświetla tę pomoc.")
     print_help("  /exit, /quit      - Zakończenie czatu.")
+    print_help("  /dual             - Uruchamia tryb dialogu dwóch agentów (Dual Agent).")
     print_help("\n  /session list     - Wyświetla listę dostępnych sesji.")
     print_help("  /session display  - Wyświetla całą historię sesji.")
     print_help("  /session pop      - Usuwa ostatnią parę wpisów (TY i asystent).")

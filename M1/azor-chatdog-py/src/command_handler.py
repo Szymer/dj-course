@@ -7,7 +7,7 @@ from commands.session_remove import remove_session_command
 from files.session_files import list_sessions as list_sessions_files
 from ui.session_picker import pick_session
 
-VALID_SLASH_COMMANDS = ['/exit', '/quit', '/switch', '/help', '/session', '/pdf']
+VALID_SLASH_COMMANDS = ['/exit', '/quit', '/switch', '/help', '/session', '/pdf', '/dual']
 
 def handle_command(user_input: str) -> bool:
     """
@@ -110,6 +110,10 @@ def handle_command(user_input: str) -> bool:
     elif command == '/pdf':
         current = manager.get_current_session()
         export_session_to_pdf(current.get_history(), current.session_id, current.assistant_name)
+
+    elif command == '/dual':
+        from commands.dual_agent_launcher import launch_dual_agent
+        launch_dual_agent()
 
     return False
 
